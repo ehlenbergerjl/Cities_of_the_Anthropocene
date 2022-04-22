@@ -1,0 +1,130 @@
+function Bookmarks(options) {
+
+  var bookmarkNodes = Array.from(document.querySelectorAll('[ng-bookmark]'));
+  var isMobile = /Android|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent || navigator.vendor || window.opera);
+
+  function commarize(nr, min) {
+    if (nr >= min) {
+      var units = ['K', 'M', 'B', 'T'];
+      var order = Math.floor(Math.log(nr) / Math.log(1000));
+      var unitName = units[(order - 1)];
+      var num = nr / Math.pow(1000, order);
+      return num.toFixed(1) + unitName;
+    }
+    return nr.toLocaleString();
+  }
+
+  function handleOnClick() {
+    window.location.href = options.loginUrl;
+    return null;
+  }
+
+  function shortCountText(btnOptions) {
+    var count = btnOptions.count;
+    return React.createElement('b', null, count ? commarize(count, 1000) : '0');
+  }
+
+  function longCountText(btnOptions) {
+    var count = btnOptions.count;
+    var commarizedElement = React.createElement('b', null, count ? commarize(count, 1000) : '0');
+    var plural = count > 1 ? 's' : '';
+    return React.createElement('span', null, [
+      'Saved by ',
+      commarizedElement,
+      ' educator' + plural
+    ]);
+  }
+
+  function bookmarkButtonLabels(shortProofCount) {
+    return {
+      dropText: {
+        loginCTA: React.createElement('div', null, [
+          React.createElement('a', {href: options.loginUrl}, 'Sign in'), ' to bookmark items'
+        ]),
+        bookmarked: React.createElement('b', null, 'Saved!'),
+        unBookmarked: React.createElement('b', null, 'Unsaved'),
+        error: React.createElement('span', {className: 'ng-text-danger'},
+          'There was an error while saving this resource. Please try again later.'
+        )
+      },
+      ariaLabel: {
+        bookmarkCTA: 'Save resource',
+        manageCTA: 'Manage resource'
+      },
+      count: shortProofCount ? shortCountText : longCountText,
+      countTitle: function (btnOptions) {
+        var count = btnOptions.count;
+        var plural = count > 1 ? 's' : '';
+        return 'Resource saved by ' + count ? commarize(count, 1000) : 0 + ' educator' + plural;
+      }
+    }
+  }
+
+  function _initBookmarksDOM() {
+    var resourceIds = bookmarkNodes.map(function (bookmarkElement) {
+      return bookmarkElement.getAttribute('ng-bookmark');
+    });
+    var buttonsObjects = function (bookmarkData) {
+      return bookmarkNodes.map(function (bookmarkElement) {
+        var bookmarkType = bookmarkElement.getAttribute('ng-bookmark-type') || null;
+        var shortProofCount = isMobile || bookmarkType === 'related-resource-bookmark';
+        var resourceId = bookmarkElement.getAttribute('ng-bookmark');
+        var entry = bookmarkData[resourceId];
+        return ReactDOM.createPortal(
+          React.createElement(NGSBookmarks.BookmarkButton, {
+            key: 'bookmark-btn-'+resourceId,
+            containerClasses: bookmarkType,
+            resourceId: resourceId,
+            resourceName: entry ? entry.name : '',
+            bookmarkCount: entry ? entry.bookmarked : 0,
+            labels: bookmarkButtonLabels(shortProofCount),
+            showDropWhenDisabled: bookmarkType !== 'related-resource-bookmark',
+            onClick: handleOnClick
+          }, null), bookmarkElement);
+      });
+    }
+
+    options.resourceIds = resourceIds;
+    var containerDiv = document.createElement('div');
+    document.getElementsByTagName('body')[0].appendChild(containerDiv);
+    ReactDOM.render(
+      React.createElement(NGSBookmarks.DetailPageBookmarks, options, buttonsObjects), containerDiv
+    );
+  }
+
+  function _initScrollListener() {
+    var floatyButtons = bookmarkNodes.filter(function (bookmarkElement) {
+      var bookmarkType = bookmarkElement.getAttribute('ng-bookmark-type') || null;
+      return !isMobile && bookmarkType === 'floaty';
+    });
+    if (floatyButtons.length > 0) {
+      document.addEventListener('scroll', function () {
+        if (window.pageYOffset > 40) {
+          floatyButtons.map(function (buttonElement) {
+            return buttonElement.getElementsByClassName('ng-bookmark-count')[0];
+          }).forEach(function (labelElement) {
+            labelElement.classList.add('ng-fade-out');
+          });
+        } else {
+          floatyButtons.map(function (buttonElement) {
+            return buttonElement.getElementsByClassName('ng-bookmark-count')[0];
+          }).forEach(function (labelElement) {
+            if (labelElement.classList.contains('ng-fade-out')) {
+              labelElement.classList.remove('ng-fade-out');
+            }
+          });
+        }
+      });
+    }
+  }
+
+  function init() {
+    _initBookmarksDOM();
+    _initScrollListener();
+  }
+
+
+  return {
+    init: init
+  }
+}

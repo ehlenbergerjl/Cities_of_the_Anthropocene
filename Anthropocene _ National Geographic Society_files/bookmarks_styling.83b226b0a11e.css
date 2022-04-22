@@ -1,0 +1,285 @@
+.ng-bookmark-count {
+  font-size: 13px;
+  cursor: default;
+  animation: ease-in-out;
+  opacity: 1;
+  transition: opacity .3s ease-in-out;
+}
+
+.ng-bookmark-container.floaty {
+  position: fixed;
+  top: 190px;
+  right: 5%;
+  width: 180px;
+}
+
+@media (max-width: 768px) {
+  .ng-bookmark-container.floaty {
+    position: absolute;
+    top: 190px;
+    right: 5%;
+    width: 180px;
+  }
+}
+
+.ng-bookmark-container.collection {
+  position: absolute;
+  top: 90px;
+  right: 0;
+  width: 180px;
+}
+
+@media (max-width: 768px) {
+  .ng-bookmark-container.collection {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: unset;
+  }
+}
+
+.ng-bookmark-container.related-resource-bookmark,
+.ng-bookmark-container.search-results-bookmark {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+}
+
+.ng-drop-container {
+  display: inline-block;
+  position: relative;
+  max-width: 100%;
+  vertical-align: middle;
+  -webkit-backface-visibility: hidden;
+}
+
+/* button used on resource pages */
+.ng-bookmark-btn.floaty-btn,
+.ng-bookmark-btn.collection-btn {
+  box-shadow: 0 1px 5px 0 rgba(0,0,0,0.5);
+}
+
+/* button used on Related Resources cards and on Search Result card */
+@media (max-width: 768px) {
+  .ng-bookmark-container.floaty {
+    top: 100px;
+    width: unset;
+  }
+}
+.item-data-container, .related-resource-card .card-content {
+  position: relative;
+}
+
+.ng-drop {
+  display: none;
+  position: absolute;
+  box-sizing: border-box;
+  width: auto;
+  padding: 15px 20px;
+  border: 1px solid #999999;
+  background-color: #FFFFFF;
+  box-shadow: -2px 2px 10px 0 rgba(153,153,153,0.5);
+  z-index: 1000;
+  color: black;
+  min-width: 150px;
+}
+
+.ng-drop.ng-open {
+  display: block;
+}
+/* temporary fix */
+.ng-tabs .ng-tab-triggers-container {
+  z-index: 0;
+}
+.ng-c-carousel.fullscreen {
+  z-index: 1001;
+}
+.ng-popover {
+  z-index: 99;
+}
+.ng-bookmark-btn {
+  z-index: 8;
+}
+
+/* drop animations */
+@keyframes ng-fade-right {
+  0% {
+    opacity: 0;
+    transform: translateX(10%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes ng-fade-left {
+  0% {
+    opacity: 1;
+    transform: translateX(0%);
+  }
+  100% {
+
+  }
+}
+.ng-fade-right { animation-name: ng-fade-right; }
+.ng-fade-left { animation-name: ng-fade-left; }
+
+/* social proof opacity */
+.ng-fade-out { opacity: 0 }
+
+/*ie only*/
+@media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+  .asset-library-filter-container .bookmark-icon {
+    top: -39px;
+  }
+  .ng-icon-bookmark::before {
+    line-height: 0;
+  }
+}
+
+
+/* ng-drop caret positioning: https://nationalgeographicatlassianprod.atlassian.net/browse/AL-1029 */
+.ng-drop:after,
+.ng-drop:before {
+  content: '';
+  display: block;
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-style: solid;
+}
+
+/* LEFT ALIGNMENT */
+.ng-drop-left:after {
+  border-color: transparent transparent transparent white;
+  border-width: 10px;
+  left: 100%;
+}
+.ng-drop-left:before {
+  border-color: transparent transparent transparent #696969;
+  border-width: 11px;
+  left: 100%;
+}
+/* left-top */
+.ng-drop-left-top:after {
+  top: 1px;
+}
+.ng-drop-left-top:before {
+  top: 0;
+}
+/* left-center */
+.ng-drop-left-center:after {
+  top: calc(50% - 10px);
+}
+.ng-drop-left-center:before {
+  top: calc(50% - 10px - 1px);
+}
+/* left-bottom */
+.ng-drop-left-bottom:after {
+  bottom: 1px;
+}
+.ng-drop-left-bottom:before {
+  bottom: 0;
+}
+
+/* RIGHT ALIGNMENT */
+.ng-drop-right:after {
+  border-color: transparent white transparent transparent;
+  border-width: 10px;
+  right: 100%;
+}
+.ng-drop-right:before {
+  border-color: transparent #696969 transparent transparent;
+  border-width: 11px;
+  right: 100%;
+}
+/* right-top */
+.ng-drop-right-top:after {
+  top: 1px;
+}
+.ng-drop-right-top:before {
+  top: 0;
+}
+/* right-center */
+.ng-drop-right-center:after {
+  top: calc(50% - 10px);
+}
+.ng-drop-right-center:before {
+  top: calc(50% - 10px - 1px);
+}
+/* right-bottom */
+.ng-drop-right-bottom:after {
+  bottom: 1px;
+}
+.ng-drop-right-bottom:before {
+  bottom: 0;
+}
+
+
+/* TOP ALIGNMENT */
+.ng-drop-top:after {
+  border-color: white transparent transparent transparent;
+  border-width: 10px;
+  top: 100%;
+}
+.ng-drop-top:before {
+  border-color: #696969 transparent transparent transparent;
+  border-width: 11px;
+  top: 100%;
+}
+/* top-right */
+.ng-drop-top-right:after {
+  right: 1px;
+}
+
+.ng-drop-top-right:before {
+  right: 0;
+}
+/* top-center */
+.ng-drop-top-center:after {
+  right: calc(50% - 10px);
+}
+.ng-drop-top-center:before {
+  right: calc(50% - 10px - 1px);
+}
+/* top-left */
+.ng-drop-top-left:after {
+  left: 1px;
+}
+.ng-drop-top-left:before {
+  left: 0;
+}
+
+
+/* BOTTOM ALIGNMENT */
+.ng-drop-bottom:after {
+  border-color: transparent transparent white transparent;
+  border-width: 10px;
+  bottom: 100%;
+}
+.ng-drop-bottom:before {
+  border-color: transparent transparent #696969 transparent;
+  border-width: 11px;
+  bottom: 100%;
+}
+/* bottom-right */
+.ng-drop-bottom-right:after {
+  right: 1px;
+}
+.ng-drop-bottom-right:before {
+  right: 0;
+}
+/* bottom-center */
+.ng-drop-bottom-center:after {
+  right: calc(50% - 10px);
+}
+.ng-drop-bottom-center:before {
+  right: calc(50% - 10px - 1px);
+}
+/* bottom-left */
+.ng-drop-bottom-left:after {
+  left: 1px;
+}
+.ng-drop-bottom-left:before {
+  left: 0;
+}

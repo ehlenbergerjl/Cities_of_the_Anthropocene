@@ -1,0 +1,315 @@
+window.cartNS = {
+
+    // Save timer to clear on expiration
+    cartTimerInterval: null,
+
+    // Cart icon in header
+    cartIcon: document.querySelector(".cart-timer"),
+    ttlValue: document.getElementById("tessitura-cart-ttl"),
+    ttlDisplay: document.getElementById("tessitura-cart-ttl-display"),
+
+    // Start timer function
+    startCartTimer: function(duration) {
+        // Given a number of seconds, this starts a countdown timer
+        var timer = duration, minutes, seconds;
+        var message = document.getElementById("cart-timer-message");
+
+        cartNS.cartTimerInterval = setInterval(function () {
+            minutes = parseInt(timer / 60);
+            seconds = parseInt(timer % 60);
+            minutes = minutes.toString();
+            seconds = seconds.toString().padStart(2, "0");
+
+            // a11y message with assertive cart update notifications
+            if (timer === 180) {
+                message.textContent = "Shopping cart expires in three minutes";
+            } else if (timer === 120) {
+                message.textContent = "Shopping cart expires in two minutes";
+            } else if (timer === 60) {
+                message.textContent = "Shopping cart expires in one minute";
+            } else if (timer <= 0) {
+                message.textContent = "Shopping cart has expired";
+            }
+
+            cartNS.ttlDisplay.textContent = minutes + ":" + seconds;
+            cartNS.cartIcon.classList.remove("ng-hidden");
+
+            if (--timer == -1) {
+                // remove the cart, cart icon, and cart timer from page.
+                cartNS.expireCart();
+                cartNS.showAlert("Your session has expired. <a href=\"/events/browse/\">Go back to events</a>.", "error");
+            }
+        }, 1000);
+    },
+
+    // Set up our HTTP request
+    showCart: function() {
+        
+        var xhr = new XMLHttpRequest();
+        var target = document.getElementById("bodyalert");
+        var cartContainer = document.querySelector(".ng-cart-container");
+        if (cartContainer == null) {
+            cartContainer = document.createElement("div");
+            cartContainer.classList.add("ng-cart-container");
+            target.parentNode.insertBefore(cartContainer, target);
+            var ngCart = document.createElement('div');
+            ngCart.classList.add('ng-cart');
+            cartContainer.appendChild(ngCart);
+            var cartLoader = document.createElement('div');
+            cartLoader.classList.add('loading');
+            cartLoader.classList.add('ng-background-white');
+            cartLoader.classList.add('ng-position-absolute');
+            cartLoader.classList.add('ng-position-cover');
+            cartLoader.classList.add('ng-position-z-index');
+            cartLoader.classList.add('ng-text-center');
+            var cartLoaderIcon = document.createElement('i');
+            cartLoaderIcon.classList.add('ng-icon-large');
+            cartLoaderIcon.classList.add('ng-icon-loading');
+            cartLoaderIcon.classList.add('ng-icon-spin');
+            cartLoaderIcon.classList.add('ng-color-black');
+            cartLoaderIcon.classList.add('ng-border-remove'); 
+            cartLoader.appendChild(cartLoaderIcon);
+            ngCart.appendChild(cartLoader);
+        }
+        
+
+        
+        // Setup our listener to process completed requests
+        xhr.onload = function () {
+
+            // Process our return data
+            if (xhr.status >= 200 && xhr.status < 300) {
+
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    var markup = data.markup;
+
+                    // Expire cart and return if cart is empty from previous checkout
+                    if (data.cart_is_empty == true) {
+                        cartNS.expireCart();
+                        return;
+                    }
+
+                    // The request was successful so add the Cart to the DOM if not already there.
+                    // Get the element we will add the Cart before.
+                    // Using the Broadcast Message container because that is reliably on every page.
+                    var target = document.getElementById("bodyalert");
+
+                    var cartContainer = document.querySelector(".ng-cart-container");
+                    if (cartContainer == null) {
+                        cartContainer = document.createElement("div");
+                        cartContainer.classList.add("ng-cart-container");
+                        target.parentNode.insertBefore(cartContainer, target);
+                    }
+                    cartContainer.innerHTML = markup;
+
+                    // find out if cookie footer exists
+                    if (window.innerWidth < 768) {
+                        var cookieFooter = document.getElementById("cookie-banner-iframe");
+                        if(typeof(cookieFooter) != "undefined" && cookieFooter != null){
+                            var cookieFooterHeight = cookieFooter.offsetHeight;
+                            var cart = document.getElementsByClassName("ng-cart")[0];
+                            cart.style.bottom = cookieFooterHeight + "px";
+                        }
+                    }
+
+                    // Remove the cart from the page when the Close Cart Button is clicked.
+                    document.getElementById("close-cart-button").addEventListener("click", function(e) {
+                        e.preventDefault();
+                        cartContainer.parentNode.removeChild(cartContainer);
+                    });
+
+                    // Remove ticket from cart when the ticket's remove link is clicked.
+                    // traditional for loop for IE compatibility
+                    const removeButtons = document.querySelectorAll(".remove-cart-performance");
+
+                    for(let i=0; i<removeButtons.length; i++){
+                        removeButtons[i].addEventListener("click", function(e) {
+                            $('.ng-cart .loading').removeClass('ng-hidden');
+                            var xhp = new XMLHttpRequest();
+                            xhp.open("POST", "/events/remove-from-cart/", true);
+
+                            //Send the proper header information along with the request
+                            xhp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+
+                            xhp.onreadystatechange = function() { // Call a function when the state changes.
+                                if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+                                    var response = JSON.parse(this.response);
+                                    if (response.data.cart_is_empty == true) {
+                                        cartNS.expireCart();
+                                    }
+                                    cartNS.showCart();
+                                }
+                            }
+                            var urlParams =
+                              "line_item_id=" + e.target.getAttribute("data-line-item-id") +
+                              "&performance_id=" + e.target.getAttribute("data-performance-id") +
+                              "&gift_certificate_number=" + e.target.getAttribute("data-gift-certificate-number") +
+                              "&product_class=" + e.target.getAttribute("data-product-class");
+
+                            xhp.send(urlParams);
+                        });
+                    }
+
+                    
+                   
+
+                } catch(err) {
+                    console.error(err.message + " in " + xhr.responseText);
+                    return;
+                }
+
+            } else {
+                // TODO: Gracefully handle what do when the request fails.
+                cartNS.showAlert("An unexpected error has occurred.  Please reload the page and try again.");
+            }
+        };
+
+        xhr.open("GET", "/events/show-cart/");
+        xhr.send();
+    },
+
+    expireCart: function() {
+        // Stops the countdown, zeroes out the timer, and removes the timer and cart from page
+        clearInterval(cartNS.cartTimerInterval);
+        cartNS.cartTimerInterval = null;
+        cartNS.cartIcon.classList.add("ng-hidden");
+        cartNS.ttlDisplay.textContent = "";
+        cartNS.ttlValue.value = "";
+        var cartContainer = document.querySelector(".ng-cart-container");
+        if (cartContainer != null) {
+            cartContainer.parentNode.removeChild(cartContainer);
+        }
+
+        // Trigger GTM cart expiration
+        window.dataLayer.push({
+          'event': 'Tessitura',
+          'eventCategory': 'ecommerce',
+          'eventAction': 'Cart expired - event checkout',
+          'eventLabel': window.location.href
+        });
+    },
+
+    showAlert: function(msg, type) {
+        // Add an alert message to page informing user that the cart session has expired.
+        var alertContainer = document.getElementById("bodyalert");
+
+        if (document.querySelectorAll('#homepage-nav').length || window.location.pathname == "/"){
+            alertContainer.classList.add('homepage-bodyalert');
+        }        
+
+        // Remove any existing danger alert messages:
+        var oldAlertMessage = alertContainer.querySelector(".cart-alert");
+        if (oldAlertMessage != null) {
+            alertContainer.removeChild(oldAlertMessage);
+        }
+
+        var alertDiv = document.createElement("div");
+
+        alertDiv.classList.add("ng-alert");
+        alertDiv.classList.add("ng-margin-top");
+        alertDiv.classList.add("cart-alert");
+
+        if (type == 'success') {
+            alertDiv.classList.add("ng-alert-success");
+        } else if (type == 'info') {
+            alertDiv.classList.add("ng-alert-info");    
+        } else {
+            alertDiv.classList.add("ng-alert-danger");    
+        }
+
+        // Add close button first (must be first child to float right)
+        var closeAlertButton = document.createElement("a");
+        closeAlertButton.classList.add("ng-alert-close")
+        closeAlertButton.classList.add("ng-close");
+        alertDiv.appendChild(closeAlertButton);
+
+        // Add alert message
+        var alertMessage = document.createElement("span");
+        alertMessage.innerHTML = msg;
+
+        alertDiv.appendChild(alertMessage);
+        alertContainer.appendChild(alertDiv);
+
+        window.scrollTo({
+            top: 0,
+            left: 0,
+            behavior: 'smooth'
+        });
+
+        closeAlertButton.addEventListener("click", function() {
+            alertContainer.removeChild(alertDiv);
+        });
+    }
+
+};
+
+// Replaced onload with setTimeout since it was overriding onload defined in header_nav.js
+setTimeout(function() {
+    // Retrieve cart status (active/ttl) asynchronously to avoid HTML caching which resulted in
+    // timer starting at same time every page refresh
+
+    $.get("/events/get-cart-status", function(response) {
+        if (response.tessitura_cart_active && response.tessitura_cart_ttl > 0) {
+            cartNS.startCartTimer(response.tessitura_cart_ttl);
+            cartNS.cartIcon.classList.remove("ng-hidden");
+        }
+        if (cartNS.cartIcon != null) {
+            cartNS.cartIcon.addEventListener("click", function(e) {
+                e.preventDefault();
+                cartNS.showCart();
+            });
+
+            // Open the cart if query param says to.
+            var urlParams = new URLSearchParams(window.location.search);
+            var cartStatus = urlParams.get('cart', '');
+            if (cartStatus == 'open') {
+                cartNS.showCart();
+            }
+
+            // Display any tessi cart/ticket related messages.
+            var cartMessage = urlParams.get('msg');
+            var cartMessageType = urlParams.get('type');
+            if (cartMessage) {
+                cartNS.showAlert(cartMessage, cartMessageType);
+            }
+        }
+    });
+}, 50);
+
+// https://github.com/uxitten/polyfill/blob/master/string.polyfill.js
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/padStart
+if (!String.prototype.padStart) {
+    String.prototype.padStart = function padStart(targetLength,padString) {
+        targetLength = targetLength>>0; //truncate if number or convert non-number to 0;
+        padString = String((typeof padString !== "undefined" ? padString : " "));
+        if (this.length > targetLength) {
+            return String(this);
+        }
+        else {
+            targetLength = targetLength-this.length;
+            if (targetLength > padString.length) {
+                padString += padString.repeat(targetLength/padString.length); //append to original to ensure we are longer than needed
+            }
+            return padString.slice(0,targetLength) + String(this);
+        }
+    };
+}
+
+(function (w) {
+
+    w.URLSearchParams = w.URLSearchParams || function (searchString) {
+        var self = this;
+        self.searchString = searchString;
+        self.get = function (name) {
+            var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(self.searchString);
+            if (results == null) {
+                return null;
+            }
+            else {
+                return decodeURI(results[1]) || 0;
+            }
+        };
+    }
+
+})(window)
