@@ -1,0 +1,236 @@
+// Namespaces are one honking great idea
+window.nav = {
+
+    // Preserve scroll positions for expanded & collapsed mobile menu
+    bodyScroll: window.scrollY || window.pageYOffset,
+    menuScroll: 0,
+
+    // CSS target for different styles at top of page
+    atTop: true,
+
+    // Re-used DOM element
+    headerContainer: document.querySelector('.ng-header-nav-container'),
+
+    // IE polyfill
+    toArray: function(list) {
+        return [].slice.call(list);
+    },
+
+    // Responsive JIT helper function
+    isMobile: function() {
+        return window.innerWidth < 1100;
+    },
+
+    // Return node level
+    getNodeLevel: function(el) {
+        return parseInt(/level(\d)-node/.exec(nav.toArray(el.classList).filter(function(c) { return c.match(/level(\d)-node/); })[0])[1]);
+    },
+
+    // Update nav UI based on scroll position
+    updateNavUI: function() {
+        yOffset = window.scrollY || window.pageYOffset;
+
+        // Desktop: Adjust nav level 1 underline and nav level 2 display on scroll
+        if (yOffset > 60 && nav.atTop) {
+            nav.atTop = false;
+            document.querySelector('#header-nav-container').classList.remove('top');
+        } else if (yOffset <= 60 && !nav.atTop) {
+            nav.atTop = true;
+            document.querySelector('#header-nav-container').classList.add('top');
+        }
+
+        // Mobile: Preserve scroll location depending on current view
+        if (document.body.classList.contains('mobile-menu-open')) {
+            nav.menuScroll = yOffset;
+        } else {
+            nav.bodyScroll = yOffset;
+        }
+    },
+
+    // Collapse all subnavs, expand only selected/hovered
+    expandSubNav: function() {
+        var selectedEl = this;
+
+        // Collapse all subnavs except currently selected (+ ancestor)
+        nav.toArray(document.querySelectorAll('li.level1-node, li.level2-node')).forEach(function(el) {
+            var dropdownEl = el.querySelector('button[aria-haspopup="true"]');
+            if (dropdownEl) {
+                dropdownEl.setAttribute('aria-expanded', el === selectedEl || nav.getNodeLevel(el) === 1);
+                dropdownEl.setAttribute('aria-visible', el === selectedEl || nav.getNodeLevel(el) === 1);
+            }
+        });
+    },
+
+    // For mobile view and screen readers, toggle subnav expansion via dropdown icon
+    toggleExpanded: function(e) {
+        // https://stackoverflow.com/a/35034284
+        var keyboardEvent = e.screenX === 0 && e.screenY === 0;
+
+        // Only trigger on mobile or when enter key is hit on desktop
+        if (nav.isMobile() || keyboardEvent) {
+            var el = this;
+            var wasExpanded = el.getAttribute('aria-expanded') == 'true';
+            el.setAttribute('aria-expanded', !wasExpanded);
+            el.setAttribute('aria-visible', !wasExpanded);
+
+            if (nav.isMobile()) {
+                if (wasExpanded) {
+                    el.classList.remove('ng-icon-directionup');
+                    el.classList.add('ng-icon-directiondown');
+                } else {
+                    el.classList.remove('ng-icon-directiondown');
+                    el.classList.add('ng-icon-directionup');
+                }
+            }
+        }
+    },
+
+    // Initialize menu node event listeners
+    initSubnav: function() {
+
+        // Desktop: reset subnavs on mouse leaving navbar
+        if (!nav.isMobile()) {
+            nav.headerContainer.removeEventListener('mouseleave', nav.expandSubNav);
+            nav.headerContainer.addEventListener('mouseleave', nav.expandSubNav);
+        }
+
+        // Level 1 remove subnav if no children
+        nav.toArray(document.querySelectorAll('.navbar-menu li.level1-node')).forEach(function(n) {
+            var level2List = n.querySelector('ul.level2-list');
+            if (level2List && !level2List.querySelector('li')) {
+                // Remove empty sublist and update underline
+                level2List.parentNode.removeChild(level2List);
+                n.classList.remove('has-children');
+            }
+        });
+
+        // Level 2 node event listeners
+        nav.toArray(document.querySelectorAll('li.level2-node')).forEach(function(el) {
+
+            var dropdownEl = el.querySelector('button[aria-haspopup="true"]');
+
+            // Initialize aria-expanded values
+            if (dropdownEl) {
+                dropdownEl.setAttribute('aria-expanded', false);
+                dropdownEl.setAttribute('aria-visible', false);
+            }
+
+            // Clear existing event listener
+            el.removeEventListener('mouseenter', nav.expandSubNav);
+
+            if (el.classList.contains('dropdown')) {
+                dropdownEl.onclick = nav.toggleExpanded;
+
+                // Reset icon directions
+                if (dropdownEl.classList.contains('ng-icon-directionup'))
+                    dropdownEl.classList.remove('ng-icon-directionup');
+                if (!dropdownEl.classList.contains('ng-icon-directiondown'))
+                    dropdownEl.classList.add('ng-icon-directiondown');
+            }
+
+            if (!nav.isMobile()) {
+                // Desktop: toggle subnav on li hover
+                el.addEventListener('mouseenter', nav.expandSubNav);
+            }
+        });
+    },
+
+    // HACK - grey nav to always highlight Education > Classroom Resources > Resource Library
+    highlightHack: function() {
+
+        if (document.querySelectorAll('.grey-nav').length > 0) {
+
+            // Education
+            nav.toArray(document.querySelectorAll('.grey-nav li.level1-node')).forEach(function(n) {
+                if (n.querySelector('a').innerText.toUpperCase() == 'EDUCATION') {
+                    n.classList.add('active');
+                }
+            });
+
+            // Classroom Resources
+            nav.toArray(document.querySelectorAll('.grey-nav li.level2-node')).forEach(function(n) {
+                if (n.querySelector('a').innerText.toUpperCase() == 'CLASSROOM RESOURCES') {
+                    n.classList.add('active');
+                }
+            });
+
+            // Resource Library
+            nav.toArray(document.querySelectorAll('.grey-nav li.level3-node')).forEach(function(n) {
+                if (n.querySelector('a').innerText.toUpperCase() == 'RESOURCE LIBRARY') {
+                    n.classList.add('active');
+                }
+            });
+        } else if (window.location.href.indexOf('org/events') > 0) {
+            // Events
+            nav.toArray(document.querySelectorAll('li.level1-node')).forEach(function(n) {
+                if (n.querySelector('a').innerText.toUpperCase() == 'EVENTS') {
+                    n.classList.add('active');
+                }
+            });
+        }
+
+        if (window.location.href.indexOf('explorer-magazine-home') > 0) {
+            // Education
+            nav.toArray(document.querySelectorAll('li.level3-node')).forEach(function(n) {
+                if (n.querySelector('a').innerText.toUpperCase() == 'EXPLORER MAGAZINE') {
+                    n.classList.add('active');
+                }
+            });
+        }
+
+        // If level 1 node is active, fade all other level 1 nodes to grey
+        if (document.querySelectorAll('li.level1-node.active').length > 0) {
+            nav.toArray(document.querySelectorAll('li.level1-node:not(.active)')).forEach(function(n) {
+                n.classList.add('inactive');
+            });
+        }
+    }
+}
+
+// Open mobile menu
+document.querySelector('.menu-icon-link').addEventListener('click', function() {
+    document.body.classList.add('mobile-menu-open');
+    window.scrollTo(0, nav.menuScroll);
+});
+
+// Close mobile menu
+document.querySelector('.close-icon-link').addEventListener('click', function() {
+    document.body.classList.remove('mobile-menu-open');
+    window.scrollTo(0, nav.bodyScroll);
+});
+
+// Skip to content
+document.getElementById('skip-to-content').addEventListener('click', function(e) {
+    const contentStartElem = document.getElementById('start-of-content').nextElementSibling;
+    if (contentStartElem instanceof HTMLElement) {
+        contentStartElem.setAttribute('tabindex', '-1');
+        contentStartElem.focus();
+    }
+    e.preventDefault();
+    e.stopPropagation();
+});
+
+// Set window events
+window.onscroll = nav.updateNavUI;
+window.onresize = nav.initSubnav;
+window.onload = function() {
+    nav.updateNavUI();
+    nav.initSubnav();
+    nav.highlightHack();
+
+    // Determine height of navbar based on current page and depth
+    var activeL1NavItem = document.querySelector('.navbar-menu li.level1-node.active');
+    if (activeL1NavItem && activeL1NavItem.classList.contains('has-children')) {
+        nav.headerContainer.classList.remove('condensed');
+    }
+
+    // Update "top" styles if applicable
+    document.querySelector('#header-nav-container').classList.add('loaded');
+}
+
+// Track donate button click to split.io
+document.querySelector('.donate-button > a').addEventListener('click', function(e) {
+    const username = this.getAttribute('data-user');
+    $.post('/splitio/', {'customer': username, 'event': 'header_cta_click'});
+    return true;
+});

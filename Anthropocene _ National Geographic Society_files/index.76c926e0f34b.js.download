@@ -1,0 +1,254 @@
+if (typeof Object.assign != 'function') {
+  // Must be writable: true, enumerable: false, configurable: true
+  Object.defineProperty(Object, "assign", {
+    value: function assign(target, varArgs) { // .length of function is 2
+      'use strict';
+      if (target == null) { // TypeError if undefined or null
+        throw new TypeError('Cannot convert undefined or null to object');
+      }
+
+      var to = Object(target);
+
+      for (var index = 1; index < arguments.length; index++) {
+        var nextSource = arguments[index];
+
+        if (nextSource != null) { // Skip over if undefined or null
+          for (var nextKey in nextSource) {
+            // Avoid bugs when hasOwnProperty is shadowed
+            if (Object.prototype.hasOwnProperty.call(nextSource, nextKey)) {
+              to[nextKey] = nextSource[nextKey];
+            }
+          }
+        }
+      }
+      return to;
+    },
+    writable: true,
+    configurable: true
+  });
+}
+
+/**
+ *
+ * @typedef {Object} SearchOptions
+ * @property {string} apiUrl
+ * @property {number} pageSize
+ * @property {string} placeholderText
+ * @property {boolean} isCollectionSearch
+ * @property {boolean} focusSearchInput
+ *
+ * @param {string} targetElement
+ * @param {SearchOptions} searchOptions
+ * @param bookmarkOptions
+ */
+function runSearchPage(targetElement, searchOptions, bookmarkOptions) {
+
+  var apiUrl = searchOptions.apiUrl || '';
+  var pageSize = searchOptions.pageSize || 25;
+  var placeholderText = searchOptions.placeholderText || '';
+  var isCollectionSearch = searchOptions.isCollectionSearch || false;
+  var focusSearchInput = searchOptions.focusSearchInput || false;
+
+  bookmarkOptions.apiRequestParams = {
+    cache: 'no-cache',
+    credentials: 'include',
+    headers: {
+      'X-CSRFToken': Cookies.get('csrftoken'),
+    },
+  };
+
+  var fetchItems = function(q, filters, page, perPage) {
+
+    var queryStringParts = [
+      'q=' + encodeURIComponent(q),
+      'page=' + page,
+      'per_page=' + perPage,
+    ];
+
+    if (filters && Object.keys(filters).length) {
+      Object.keys(filters).forEach(function (filterKey) {
+        filters[filterKey].forEach(function (filterValue) {
+          queryStringParts.push(filterKey + '=' + encodeURIComponent(filterValue));
+        });
+      })
+    }
+
+    var url = '?' + queryStringParts.join('&');
+
+    history.replaceState({}, '', url);
+
+    url = apiUrl + url;
+
+    var headers = new Headers();
+
+    var responseProcessor = function(response) {
+      // const {meta: {filters, paging}, result} = response;
+      var filters = response.meta.filters;
+      var paging = response.meta.paging;
+      var result = response.result;
+      return {
+        filters: filters.map(function(filter) {
+          return Object.assign({}, filter, {
+            attribute: filter.key,
+          });
+        }),
+        page: paging.page,
+        totalPages: paging.pages,
+        perPage: paging.per_page,
+        totalResultsCount: result.total,
+        results: result.items.map(function(item, index) {
+          return {
+            thumbnail: item.key_image,
+            subjects: item.subjects,
+            grades: item.grades,
+            title: item.title,
+            body: item.abstract,
+            url: item.url,
+            contentType: item.content_type,
+            extra: item.extra,
+            uuid: item.uuid_nk,
+            // tslint:disable-next-line:radix
+            rank: (parseInt(paging.page) - 1) * parseInt(paging.per_page) + index + 1,
+            variations: item.variations,
+            bookmarked: item.bookmarked,
+          };
+        }),
+        promoResults: result.promo_banners.map(function(item) {
+          return {
+            background: item.background,
+            kicker: item.kicker,
+            title: item.title,
+            description: item.description,
+            ctaLabel: item.cta_label,
+            ctaColor: item.cta_color,
+            ctaUrl: item.cta_url,
+            contentAlignment: item.content_alignment,
+            position: item.position,
+          };
+        }),
+      };
+    };
+
+    return fetch(url, {
+        credentials: 'same-origin',
+        headers: headers
+      })
+      .then(function(response){ return response.json()})
+      .then(function (json) {
+        return Promise.resolve(responseProcessor(json));
+      });
+  };
+
+  var fetchSuggestions = function(q, filters) {
+
+    var queryStringParts = [
+      'q=' + encodeURIComponent(q),
+      'suggest=true'
+    ];
+
+    if (filters && Object.keys(filters).length) {
+      Object.keys(filters).forEach(function (filterKey) {
+        filters[filterKey].forEach(function (filterValue) {
+          queryStringParts.push(filterKey + '=' + encodeURIComponent(filterValue));
+        });
+      })
+    }
+
+    var url = '?' + queryStringParts.join('&');
+    url = apiUrl + url;
+
+    var headers = new Headers();
+
+    return fetch(url, {
+        credentials: 'same-origin',
+        headers: headers
+      })
+      .then(function(response){ return response.json()});
+  };
+
+
+  ReactDOM.render(
+    React.createElement(NgsSearchUiRL.Search, {
+      pageSize: pageSize,
+      fetchItems: fetchItems,
+      fetchSuggestions: fetchSuggestions,
+      initFromLocation: true,
+      bookmarkConfigUrls: bookmarkOptions,
+      isCollectionSearch: isCollectionSearch,
+      focusSearchInput: focusSearchInput
+    }, null), targetElement);
+}
+
+function initSearchModule(options) {
+
+    var _options = Object.assign({
+      placeholder: '',
+      autoFocus: true,
+      heading: '',
+      headingClass: null,
+      filters: [],
+      resourceLibraryUrl: '',
+      apiUrl: '',
+      targetElement: null
+    }, options);
+
+    var placeholder = _options.placeholder;
+    var autoFocus = _options.autoFocus;
+    var heading = _options.heading;
+    var headingClass = _options.headingClass;
+    var filters = _options.filters;
+    var resourceLibraryUrl = _options.resourceLibraryUrl;
+    var apiUrl = _options.apiUrl;
+    var targetElement = _options.targetElement;
+
+    ReactDOM.render(
+      React.createElement(NgsSearchUiRL.SearchModule, {
+        placeholder: placeholder,
+        autoFocus: autoFocus,
+        heading: heading,
+        headingClass: headingClass,
+        filters: filters,
+        onSearch: function (query, filters) {
+
+          var queryStringParts = [
+            'q=' + query,
+          ];
+
+          if (filters && Object.keys(filters).length) {
+            Object.keys(filters).forEach(function (filterKey) {
+              filters[filterKey].forEach(function (filterValue) {
+                queryStringParts.push(filterKey + '=' + encodeURIComponent(filterValue));
+              });
+            })
+          }
+
+          window.location = resourceLibraryUrl + '?' + queryStringParts.join('&');
+        },
+        onSuggest: function (query, selectedFilters) {
+          var queryStringParts = [
+            'q=' + query,
+            'suggest=true'
+          ];
+
+          if (selectedFilters && Object.keys(selectedFilters).length) {
+            Object.keys(selectedFilters).forEach(function (filterKey) {
+              selectedFilters[filterKey].forEach(function (filterValue) {
+                queryStringParts.push(filterKey + '=' + encodeURIComponent(filterValue));
+              });
+            })
+          }
+          var url = '?' + queryStringParts.join('&');
+          url = apiUrl + url;
+
+          var headers = new Headers();
+
+          return fetch(url, {
+              credentials: 'same-origin',
+              headers: headers
+            })
+            .then(function(response) {
+              return response.json()
+            });
+        }
+      }, null), targetElement);
+}

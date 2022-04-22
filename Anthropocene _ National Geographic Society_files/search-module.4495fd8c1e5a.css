@@ -1,0 +1,32 @@
+.search-module .ng-select-list {
+  padding: inherit;
+}
+.search-module .ng-select-list .ng-nav {
+  margin: inherit !important;
+}
+.search-module .ng-select .ng-select-display-values,
+.ng-select .ng-select-search-input {
+  min-height: 24px;
+}
+.search-module .ng-select .ng-select-hierarchical .ng-c-list-back-btn {
+  padding: 15px!important;
+  margin-bottom: 0!important;
+}
+.search-module .ng-select .ng-select-hierarchical li {
+  padding-left: 20px !important;
+  padding-right: 20px !important;
+  padding-top: 20px !important;
+  padding-bottom: 15px !important;
+}
+.search-module .ng-multiselect-menu {
+  padding: 20px 15px 15px;
+}
+.education-resource-search-container {
+  z-index: 999;
+}
+#article-content .education-resource-search-container {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  min-width: auto;
+  margin: 0 auto;
+}

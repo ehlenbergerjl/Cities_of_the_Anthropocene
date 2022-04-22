@@ -1,0 +1,31 @@
+window.splitio = {
+
+    // Convert JSON data to encoded URL parameters
+    convertJsonToUrl: function(json) {
+        return Object.keys(json).map(function(k) {
+            return encodeURIComponent(k) + '=' + encodeURIComponent(json[k])
+        }).join('&')
+    },
+
+    // Track event by hitting custom middleware with JSON data
+    track: function(data, cb) {
+        if (Object.keys(data).indexOf('event') < 0) {
+            console.error('Splitio event tracking must have an "event" key.');
+            return;
+        }
+
+        var request = new XMLHttpRequest();
+        var params = this.convertJsonToUrl(data);
+
+        request.open('POST', '/splitio/', true);
+        request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+
+        if (typeof cb == 'function') {
+            request.onload = cb;
+            request.onerror = cb;
+        }
+
+        request.send(params);
+    }
+
+}
